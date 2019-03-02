@@ -1,0 +1,25 @@
+{
+	"plugin": {
+		"name": "Dead Code Eliminator",
+		"type": ["core", "ui", "architecture", "binaryview"],
+		"api": "python2",
+		"description": "Detects and eliminates dead code in obfuscated binaries.",
+		"longdescription": "This plugin recursively calculates a set of def-use chains in a binary. This allows us to segment the benign code from the interesting code by tracing these def-use chains backwards, as most of the dummy code should be fairly isolated from the malicious code.",
+		"license": {
+			"name": "MIT",
+			"text": "Copyright (c) 2019 Rylan O'Connell,\n\nPermission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the \"Software\"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:\n\nThe above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.\n\nTHE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE."
+		},
+		"dependencies": {
+			"pip": [],
+			"apt": [],
+			"installers": [],
+			"other": []
+		},
+		"version": "1.0 alpha",
+		"author": "Rylan O'Connell",
+		"minimumBinaryNinjaVersion": {
+			"dev": "1.0.dev-576",
+			"release": "9999"
+		}
+	}
+}
