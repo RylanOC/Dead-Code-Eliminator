@@ -10,13 +10,18 @@ from binaryninja.plugin import BackgroundTaskThread
 from binaryninja.enums import (MediumLevelILOperation, RegisterValueType)
 
 
-def is_static(i):
-    return True
+def is_critical(instruction):
+    bb = instruction.il_basic_block
+    if len(bb.outgoing_edges) > 1:
+        for outgoing in bb.outgoing_edges:
+            if len(outgoing.target.incoming_edges) > 1:
+                return True
+    return False
 
 
-def mark(bv, marks, status, function):
+def mark(bv, status, function):
     bv.update_analysis_and_wait()
-
+    marks = {}
     worklist = []
     for bb in function.mlil:
         for instruction in bb:
@@ -28,7 +33,7 @@ def mark(bv, marks, status, function):
             for written in instruction.vars_written:
                 marks[written] = False
 
-            if is_static(instruction):
+            if is_critical(instruction):
                 for written in instruction.vars_written:
                     marks[written] = True
                 if instruction not in worklist:  # unnecessary?
@@ -37,51 +42,33 @@ def mark(bv, marks, status, function):
     while len(worklist) > 0:
         instruction = worklist.pop()
         for op in instruction.vars_read:
-            if not marks[op]:
-                for definition in function.medium_level_il.get_ssa_var_definition(op):
-                    marks[definition] = True
-                    worklist.append(definition)
+            if op in marks:
+                if not marks[op]:
+                    for definition in function.medium_level_il.get_ssa_var_definition(op):
+                        marks[definition] = True
+                        worklist.append(definition)
+
+    return marks
 
 
+def sweep(function, marks):
+    for bb in function.mlil:
+        for instruction in bb:
+            for written in instruction.vars_written:
+                if not marks[written]:
+                    if instruction.instr_index == bb.end:  # if instruction is a jump/if
+                        print("updating branch at {}...", instruction.address)
+                    else:
+                        print("eliminating instruction at {}...", instruction.address)
 
 
-
-    '''
-    patch_locations = []
-    for i in bv.mlil_instructions:
-        # Allow the UI to cancel the action
-        if status.cancelled:
-            break
-
-        if i.operation != MediumLevelILOperation.MLIL_IF:
-            continue
-        # Get the possible_values of the condition result
-        condition_value = i.condition.possible_values
-        # If the condition never changes then its safe to patch the branch
-        if condition_value.type == RegisterValueType.ConstantValue:
-            if condition_value.value == 0 and bv.is_never_branch_patch_available(i.address):
-                patch_locations.append((i.address, True))
-            elif bv.is_always_branch_patch_available(i.address):
-                patch_locations.append((i.address, False))
-
-    return patch_locations
-    '''
-
-
-def eliminate_dead_code(bv, status):
+def eliminate_dead_code(bv, status, function):
     analysis_pass = 0
     while True:
+        print("starting analysis pass {}...", analysis_pass)
         analysis_pass += 1
-        patch_locations = mark(bv, status)
-        if len(patch_locations) == 0 or analysis_pass == 10 or status.cancelled:
-            break
-        for address, always in patch_locations:
-            if always:
-                log_info("Patching instruction {} to never branch.".format(hex(address)))
-                bv.never_branch(address)
-            else:
-                log_info("Patching instruction {} to always branch.".format(hex(address)))
-                bv.always_branch(address)
+        marks = mark(bv, status, function)
+        sweep(function, marks)
 
 
 class DeadCodeEliminator(BackgroundTaskThread):
@@ -89,12 +76,17 @@ class DeadCodeEliminator(BackgroundTaskThread):
         BackgroundTaskThread.__init__(self, msg, True)
         self.bv = bv
 
+    def __init__(self, bv, msg, function_name):
+        BackgroundTaskThread.__init__(self, msg, True)
+        self.bv = bv
+        self.function = function_name
+
     def run(self):
-        eliminate_dead_code(self.bv, self)
+        eliminate_dead_code(self.bv, self, self.function)
 
 
-def run_in_background(bv):
-    background_task = DeadCodeEliminator(bv, "Patching dead code...")
+def run_in_background(bv, function):
+    background_task = DeadCodeEliminator(bv, "Patching dead code...", function)
     background_task.start()
 
 
@@ -116,4 +108,7 @@ def main():
 if __name__ == "__main__":
     main()
 else:
-    PluginCommand.register("Eliminate Dead Code", "Patch out all useless code in the binary", run_in_background)
+    PluginCommand.register_for_function(
+        "Eliminate Dead Code",
+        "Patch out dead code in the current function",
+        run_in_background)
