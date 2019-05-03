@@ -2,7 +2,10 @@
 Author: **Rylan O'Connell**
 _Detects and eliminates dead code in obfuscated binaries._
 ## Description:
-This plugin recursively calculates a set of def-use chains in a binary. This allows us to segment the benign code from the interesting code by tracing these def-use chains backwards, as most of the dummy code should be fairly isolated from the malicious code.
+This plugin attempts to de-obfuscate binaries with "dummy code" injected in them. Leveraging Binary Ninja's API, we can construct a series of def-use chains, isolating the "real" code from the "dummy" code. See the screenshot below for a basic example of this plugin in action:
+
+![dead_code](dead_code.png)
+
 ## Minimum Version
 
 This plugin requires the following minimum version of Binary Ninja:
@@ -15,10 +18,10 @@ This plugin requires the following minimum version of Binary Ninja:
 
 The following dependencies are required for this plugin:
 
- * pip - 
- * apt - 
- * installers - 
- * other - 
+ * pip - NA
+ * apt - NA
+ * installers - NA
+ * other - NA
 
 
 ## License

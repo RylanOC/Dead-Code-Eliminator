@@ -1,9 +1,11 @@
-# https://www.cs.ucsb.edu/~yufeiding/cs293s/slides/293S_07_SSA_dead.pdf (for worklist style algorithm)
-
-
 import sys
 
 from binaryninja import *
+
+'''
+TODO: detect function prologue/return
+TODO: add patching
+'''
 
 def is_critical(instruction):
     bb = instruction.il_basic_block
@@ -34,16 +36,16 @@ def mark(bv, status, function):
                 if instruction not in worklist:  # unnecessary?
                     worklist.append(ssa_var)
 
-    print('starting worklist...')
     while len(worklist) > 0:
+        # allow UI to cancel the analysis
+        if status.cancelled:
+            break
+
         instruction = worklist.pop()
-        print(instruction)
         for op in instruction.vars_read:
-            print(op)
             if op in marks:
                 if not marks[op]:
                     for definition in function.medium_level_il.get_ssa_var_definition(op):
-                        print(definition)
                         marks[definition] = True
                         worklist.append(definition)
 
@@ -56,18 +58,14 @@ def sweep(function, marks):
             for written in instruction.vars_written:
                 if not marks[written]:
                     if instruction.instr_index == bb.end:  # if instruction is a jump/if
-                        print("updating branch at {}...", instruction.address)
+                        print("updating branch at 0x{:02x}...".format(instruction.address))
                     else:
-                        print("eliminating instruction at {}...", instruction.address)
+                        print("eliminating instruction at 0x{:02x}...".format(instruction.address))
                     function.set_user_instr_highlight(instruction.address, 
                         HighlightStandardColor.RedHighlightColor)    
 
 
 def eliminate_dead_code(bv, status, function):
-    analysis_pass = 0
-    # while True:
-    print("starting analysis pass {}...", analysis_pass)
-    analysis_pass += 1
     marks = mark(bv, status, function)
     sweep(function, marks)
 
