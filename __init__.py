@@ -3,12 +3,7 @@
 
 import sys
 
-from binaryninja.log import log_info
-from binaryninja.binaryview import BinaryViewType
-from binaryninja.plugin import PluginCommand
-from binaryninja.plugin import BackgroundTaskThread
-from binaryninja.enums import (MediumLevelILOperation, RegisterValueType)
-
+from binaryninja import *
 
 def is_critical(instruction):
     bb = instruction.il_basic_block
@@ -39,12 +34,16 @@ def mark(bv, status, function):
                 if instruction not in worklist:  # unnecessary?
                     worklist.append(ssa_var)
 
+    print('starting worklist...')
     while len(worklist) > 0:
         instruction = worklist.pop()
+        print(instruction)
         for op in instruction.vars_read:
+            print(op)
             if op in marks:
                 if not marks[op]:
                     for definition in function.medium_level_il.get_ssa_var_definition(op):
+                        print(definition)
                         marks[definition] = True
                         worklist.append(definition)
 
@@ -60,15 +59,17 @@ def sweep(function, marks):
                         print("updating branch at {}...", instruction.address)
                     else:
                         print("eliminating instruction at {}...", instruction.address)
+                    function.set_user_instr_highlight(instruction.address, 
+                        HighlightStandardColor.RedHighlightColor)    
 
 
 def eliminate_dead_code(bv, status, function):
     analysis_pass = 0
-    while True:
-        print("starting analysis pass {}...", analysis_pass)
-        analysis_pass += 1
-        marks = mark(bv, status, function)
-        sweep(function, marks)
+    # while True:
+    print("starting analysis pass {}...", analysis_pass)
+    analysis_pass += 1
+    marks = mark(bv, status, function)
+    sweep(function, marks)
 
 
 class DeadCodeEliminator(BackgroundTaskThread):
